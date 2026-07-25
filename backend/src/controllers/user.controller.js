@@ -6,6 +6,7 @@ import crypto from "crypto";
 import { sendEmail } from '../utils/sendEmail.js';
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { register } from '../services/auth.service.js';
 
 const generateAccessTokenandRefreshToken = async (user) => {
   try {
@@ -25,46 +26,13 @@ const generateAccessTokenandRefreshToken = async (user) => {
 
 const registerUser = asyncHandler( async (req, res, ) => {
   
-  const {fullname, email, password, role} = req.body;
-  
-    // Check if user already exists
-  const userExists = await User.findOne({ email });
-
-  if(userExists) 
-    throw new ApiError(400, "User already exists");
-
-  // Hash the password
-  const hashedPassword = await bcrypt.hash(password, 10 );
-  
-  const verificationToken = crypto.randomBytes(32).toString("hex");
-  const verificationTokenExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
-
-  const hashedVerificationToken = crypto.createHash("sha256").update(verificationToken).digest("hex");
-  
-  // Create a new user object
-  const newUser = await User.create({ 
-    fullname: fullname,
-    email,
-    password: hashedPassword,
-    role: role || 'user',
-    verificationToken: hashedVerificationToken,
-    verificationTokenExpires
-  });
-
-  const verificationLink = `process.env.VERIFYLINK/${verificationToken}`;
-  const message = `Please verify your email by clicking the following link: ${process.env.VERIFYLINK}/${verificationToken}`;
-  
-  await sendEmail({
-    to: newUser.email,
-    subject: "Verify your email",
-    text: message,
-    verificationLink
-  });
+  //service layer
+  const newUser = await register(req.body);
 
   res
   .status(200)
   .json(
-    new ApiResponse(200, "Please verify your email")
+    new ApiResponse(200, { email: newUser.email }, "Please verify your email")
   );
   }
 )
