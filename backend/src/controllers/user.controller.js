@@ -1,23 +1,7 @@
 import {asyncHandler} from '../utils/asyncHandler.js'
 import jwt from 'jsonwebtoken';
-import { ApiError } from "../utils/ApiError.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
-import { register, login, logout, refresh } from '../services/auth.service.js';
-
-// const generateAccessTokenandRefreshToken = async (user) => {
-//   try {
-//     const accessToken = user.generateAccessToken();
-//     const refreshToken = user.generateRefreshToken();
-    
-//     user.refreshToken = refreshToken;
-//     await user.save({ validateBeforeSave: false });
-//     return { accessToken, refreshToken };
-
-//   } catch (error) {
-//     throw new ApiError( 500, "somthing went wrong while generating access token and refresh token");
-//   }
-// };
-
+import { ApiResponse, ApiError, cookieOptions } from '../utils/utils.index.js';
+import { register, login, logout, refreshUserSession, verifyEmail } from '../services/auth.service.js';
 
 
 const registerUser = asyncHandler( async (req, res, ) => {
@@ -34,41 +18,16 @@ const registerUser = asyncHandler( async (req, res, ) => {
 )
 
 const emailVerify = asyncHandler(async (req, res)=>{
-  const {token} =req.params;
 
-  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-  const user = await User.findOne({ verificationToken : hashedToken})
+  await verifyEmail(req.params.token);
 
-  if(!user) {
-    throw new ApiError (400, "INVALID OR EXPIRED RESET TOKEN")
-  }
-  
-  if(user.isVerified){
-    throw new ApiError(403, "User already verified");
-  }
-
-  if(Date.now() > user.verificationTokenExpires){
-    throw new ApiError(400, "Verification token expired");
-  }
-
-  user.isVerified = true;
-  user.verificationToken = null;
-  user.verificationTokenExpires = null;
-  await user.save()
-
-  res.status(200).json(new ApiResponse(200, "Email verified successfully"));
+  res.status(201).json(new ApiResponse(201, "Email verified successfully"));
   
 })
 
 const loginUser = asyncHandler(async (req, res ) =>{
 
   const { user, accessToken, refreshToken } = await login(req.body);
-
-  const cookieOptions = {
-    httpOnly: true,
-    secure: true,
-    sameSite: "strict"
-  };
 
   res
   .status(200)
@@ -93,19 +52,12 @@ const refreshToken = asyncHandler(async (req, res) => {
 
   const { accessToken, refreshToken } = await refreshUserSession(token);
 
-  const cookieOptions = {
-    httpOnly: true,
-    secure: true,
-    sameSite: "strict"
-  };
-
   return res
   .status(200)
   .cookie("accessToken", accessToken, cookieOptions)
   .cookie("refreshToken", refreshToken, cookieOptions)
   .json(new ApiResponse(200, "AccessToken generated successfully"));
-});
-
+})
 
 const getProfile = asyncHandler( async(req, res) => {
   res

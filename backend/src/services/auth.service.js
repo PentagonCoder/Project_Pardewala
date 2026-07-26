@@ -1,4 +1,5 @@
 import { ApiError } from "../utils/utils.index.js";
+import jwt from 'jsonwebtoken';
 import User from "../model/user.model.js"
 import bcrypt from "bcrypt";
 import crypto from "crypto";
@@ -30,7 +31,7 @@ export const generateAccessTokenandRefreshToken = async (user) => {
   } catch (error) {
     throw new ApiError( 500, "somthing went wrong while generating access token and refresh token");
   }
-};
+}
 
 export const register = async({ fullname, email, password, role }) => {
 
@@ -67,6 +68,30 @@ export const register = async({ fullname, email, password, role }) => {
   });
 
   return newUser;
+}
+
+export const verifyEmail = async (token) => {
+
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+  const user = await User.findOne({ verificationToken : hashedToken})
+
+  if(!user) {
+    throw new ApiError (400, "INVALID OR EXPIRED RESET TOKEN")
+  }
+  
+  if(user.isVerified){
+    throw new ApiError(403, "User already verified");
+  }
+
+  if(Date.now() > user.verificationTokenExpires){
+    throw new ApiError(400, "Verification token expired");
+  }
+
+  user.isVerified = true;
+  user.verificationToken = null;
+  user.verificationTokenExpires = null;
+  await user.save()
+
 }
 
 export const login = async({ email, password }) => {
