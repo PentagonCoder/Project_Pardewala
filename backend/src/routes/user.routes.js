@@ -3,8 +3,20 @@ import { Router } from 'express';
 const router = Router();
 
 
-import { registerUser, emailVerify, loginUser, getProfile, refreshToken, logoutUser, adminDashboard} from '../controllers/user.controller.js';
-import { forgotPassword , resetPassword, forgotPasswordOtp, resetPasswordOtp} from '../controllers/auth.controller.js';
+import { 
+  registerUser, 
+  emailVerify, 
+  loginUser, 
+  getProfile, 
+  refreshToken, 
+  logoutUser, 
+  adminDashboard,
+  forgotPassword, 
+  resetPassword, 
+  forgotPasswordOtp, 
+  resetPasswordOtp,
+} from '../controllers/user.controller.js';
+
 import {verifyjwt} from '../middlewares/auth.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
 import { registerSchema } from '../validators/user.validation.js';

@@ -164,3 +164,88 @@ export const refreshUserSession = async (token) => {
 
   return { accessToken, refreshToken };
 }
+
+export const forgetPasswordUser = async ({ email }) => {
+
+  // Generate verification token
+  const { plainToken, hashedToken, expiresAt } = generateEmailVerificationToken();
+
+  const user = await User.findOne({ email });
+
+  if(!user) {
+    throw new ApiError(404, "If account exists, reset email sent");
+  }
+
+  user.passwordResetToken = hashedToken;
+  user.passwordResetExpires = expiresAt;
+
+  await user.save();
+
+  const resetUrl = `http://localhost:3000/api/users/reset-password/${plainToken}`;
+  const message = `You requested a password reset. Click the link to reset your password: ${resetUrl}`;
+
+  await sendEmail({
+    to : user.email,
+    subject : "Password Reset Request",
+    text : message
+  })
+}
+
+export const verifyResetPassword = async ( token, newPassword ) => {
+
+  // Hash the token from the URL to compare with the hashed token in the database
+  const hashedToken = crypto
+  .createHash("sha256")
+  .update(token)
+  .digest("hex");
+
+  // Find the user with the matching reset token and check if it's not expired
+  const user = await User.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetExpires: { $gt: Date.now() }
+  });
+
+  // If no user is found, the token is invalid or expired
+  if(!user) {
+    throw new ApiError(400, "INVALID OR EXPIRED RESET TOKEN");
+  }
+
+  // Hash the new password and update the user's password
+  const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+  user.password = hashedNewPassword;
+
+  // Clear the reset token and expiration time
+  user.passwordResetToken = null;
+  user.passwordResetExpires = null;
+
+  await user.save();
+}
+export const forgotPasswordOtpService = async ({ email }) => {
+
+  //generate 6 digit otp
+  const OTP = crypto.randomInt(100000, 999999).toString();
+
+  const user = await User.findOne({ email })
+
+  if(!user) {
+    throw new ApiResponse(200, "If account exists, reset email sent");
+  }
+  
+  const hashedOTP = crypto
+  .createHash("sha256")
+  .update(OTP)
+  .digest("hex");
+
+  user.otp = hashedOTP;
+  user.otpExpiry = Date.now() + 5 * 60 * 1000;
+  await user.save()
+
+  const message = `Your OTP for password reset is: ${OTP}`;
+
+  await sendEmail({
+    to : user.email,
+    subject : "Password Reset OTP",
+    text : message
+  })
+  
+}

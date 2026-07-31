@@ -8,35 +8,8 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
 const forgotPassword = asyncHandler ( async(req, res, ) => {
-  const { email } = req.body;
-  const resetToken = crypto.randomBytes(12).toString("hex");
-  console.log(resetToken);
-
-  const hashedToken = await crypto
-  .createHash("sha256")
-  .update(resetToken)
-  .digest("hex");
-
-  const user = await User.findOne({ email });
-
-  if(!user) {
-    throw new ApiError(404, "If account exists, reset email sent");
-  }
-
-  user.passwordResetToken = hashedToken;
-  user.passwordResetExpires = Date.now() + 10 * 60 * 1000;
-
-  await user.save();
-
-  const resetUrl = `http://localhost:3000/api/users/reset-password/${resetToken}`;
-  const message = `You requested a password reset. Click the link to reset your password: ${resetUrl}`;
-
-  await sendEmail({
-    to : user.email,
-    subject : "Password Reset Request",
-    text : message
-  })
-
+  
+  await 
   res.status(200).json(new ApiResponse(200, "If account exists, reset email sent"));
 })
 
@@ -150,6 +123,7 @@ const resetPasswordOtp = asyncHandler( async(req, res) => {
 
   res.status(200).json(new ApiResponse(200, "PASSWORD RESET SUCCESSFUL"));
 })
+
 
 
 export { forgotPassword, resetPassword, forgotPasswordOtp, resetPasswordOtp };
