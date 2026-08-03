@@ -7,7 +7,8 @@ import {
   registerUser, 
   emailVerify, 
   loginUser, 
-  getProfile, 
+  getProfile,
+  getUpdateProfile, 
   refreshToken, 
   logoutUser, 
   adminDashboard,
@@ -28,6 +29,7 @@ router.get('/verify-email/:token', emailVerify)
 router.post('/login', loginUser );
 router.post('/refresh-Token', refreshToken);
 router.get('/profile', verifyjwt, getProfile);
+router.patch('/profile', verifyjwt, getUpdateProfile);
 router.post('/logout', verifyjwt, logoutUser);
 router.get('/admin/dashboard', verifyjwt, authorizeRoles ('admin'), adminDashboard);
 router.post('/forgot-password', forgotPassword);

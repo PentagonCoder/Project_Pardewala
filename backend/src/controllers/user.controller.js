@@ -1,16 +1,17 @@
 import {asyncHandler} from '../utils/asyncHandler.js'
 import jwt from 'jsonwebtoken';
 import { ApiResponse, ApiError, cookieOptions } from '../utils/utils.index.js';
+import crypto from "crypto";
 import { 
   register, 
-  login, 
+  login,
+  updateProfile,
   logout, 
   refreshUserSession, 
   verifyEmail, 
   forgetPasswordUser, 
   verifyResetPassword 
 } from '../services/auth.service.js';
-import crypto from "crypto";
 
 
 const registerUser = asyncHandler( async (req, res, ) => {
@@ -74,6 +75,15 @@ const getProfile = asyncHandler( async(req, res) => {
   .json(new ApiResponse(200, { _id: req.user._id, email: req.user.email, fullname: req.user.fullname, role: req.user.role }, "Welcome to your profile"));
 })
 
+const getUpdateProfile = asyncHandler( async(req, res) => {
+
+  const updatedUser = await updateProfile({ userId: req.user._id, fullname: req.body.fullname });
+
+  res
+  .status(200)
+  .json(new ApiResponse(200, updatedUser, "Profile updated successfully"));
+})
+
 const adminDashboard = asyncHandler( async(req, res) => {
   res.status(200).json(new ApiResponse(200, { _id: req.user._id, fullname: req.user.fullname }, `Welcome to adminDashboard !`));
 })
@@ -106,44 +116,10 @@ const forgotPasswordOtp = asyncHandler ( async(req, res, next) => {
 })
 
 const resetPasswordOtp = asyncHandler( async(req, res) => {
-  const { email, otp, newPassword } = req.body;
 
-  if(!email || !otp || !newPassword) {
-    throw new ApiError(400, "Email, OTP and new password are required");
-  }
-
-  // Find the user by email
-  const user = await User.findOne({email});
-
-  if(!user) {
-    throw new ApiError(404, "Invalid request");
-  }
-
-  // Check if user exists, OTP is correct and not expired
-  if(Date.now() > user.otpExpiry){
-    throw new ApiError(400, "OTP Expire");
-  }
-
-  // hash the received OTP 
-  const hashedOtpRecive = crypto
-  .createHash("sha256")
-  .update(otp)
-  .digest("hex");
-
-  // compare hashed received OTP with stored hashed OTP
-  if(hashedOtpRecive !== user.otp){
-    throw new ApiError(400, "OTP WRONG");
-  }
+  await resetPasswordOtpService(req.body);
   
-  // Hash the new password and update the user's password
-  const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-  user.password = hashedNewPassword;
-
-  user.otp = null
-  user.otpExpiry = null
-  await user.save()
-
   res.status(200).json(new ApiResponse(200, "PASSWORD RESET SUCCESSFUL"));
 })
 
-export { registerUser, emailVerify, loginUser, getProfile, refreshToken, logoutUser, adminDashboard, forgotPassword, resetPassword, forgotPasswordOtp, resetPasswordOtp };
+export { registerUser, emailVerify, loginUser, getProfile, getUpdateProfile, refreshToken, logoutUser, adminDashboard, forgotPassword, resetPassword, forgotPasswordOtp, resetPasswordOtp };

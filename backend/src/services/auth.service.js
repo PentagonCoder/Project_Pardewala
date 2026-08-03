@@ -131,6 +131,31 @@ export const login = async({ email, password }) => {
   };
 }
 
+export const updateProfile = async({ userId, fullname }) => {
+
+  const update = {};
+
+  if(fullname) update.fullname = fullname;
+    // if (avatar) update.avatar = avatar;
+    // if (phone) update.phone = phone;
+    // if (bio) update.bio = bio;
+  const user = await User.findByIdAndUpdate(userId, update, { new: true });
+  
+  if(!user){
+    throw new ApiError(400, "Not exist");
+  }
+
+  return { 
+    user: 
+    { 
+      _id: user._id,
+      email: user.email, 
+      fullname: user.fullname, 
+      role: user.role 
+    }
+  };
+}
+
 export const logout = async (userId) => {
 
   // Clear the refresh token from the user's record in the database
@@ -191,7 +216,7 @@ export const forgetPasswordUser = async ({ email }) => {
   })
 }
 
-export const verifyResetPassword = async ( token, newPassword ) => {
+export const verifyResetPassword = async ({ token, newPassword }) => {
 
   // Hash the token from the URL to compare with the hashed token in the database
   const hashedToken = crypto
@@ -220,6 +245,7 @@ export const verifyResetPassword = async ( token, newPassword ) => {
 
   await user.save();
 }
+
 export const forgotPasswordOtpService = async ({ email }) => {
 
   //generate 6 digit otp
@@ -228,7 +254,7 @@ export const forgotPasswordOtpService = async ({ email }) => {
   const user = await User.findOne({ email })
 
   if(!user) {
-    throw new ApiResponse(200, "If account exists, reset email sent");
+    throw new ApiError(200, "If account exists, reset email sent");
   }
   
   const hashedOTP = crypto
@@ -247,5 +273,43 @@ export const forgotPasswordOtpService = async ({ email }) => {
     subject : "Password Reset OTP",
     text : message
   })
+
+}
+
+export const resetPasswordOtpService = async ({ email, otp, newPassword }) => {
+
+  if(!email || !otp || !newPassword) {
+    throw new ApiError(400, "Email, OTP and new password are required");
+  }
+
+  // Find the user by email
+  const user = await User.findOne({email});
+
+  if(!user) {
+    throw new ApiError(404, "Invalid request");
+  }
+
+  // Check if user exists, OTP is correct and not expired
+  if(Date.now() > user.otpExpiry){
+    throw new ApiError(400, "OTP Expire");
+  }
+
+  // hash the received OTP 
+  const hashedOtpRecive = crypto
+  .createHash("sha256")
+  .update(otp)
+  .digest("hex");
+
+  // compare hashed received OTP with stored hashed OTP
+  if(hashedOtpRecive !== user.otp){
+    throw new ApiError(400, "OTP WRONG");
+  }
   
+  // Hash the new password and update the user's password
+  const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+  user.password = hashedNewPassword;
+
+  user.otp = null
+  user.otpExpiry = null
+  await user.save()
 }
