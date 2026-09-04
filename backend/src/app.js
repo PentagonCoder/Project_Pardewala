@@ -28,7 +28,9 @@ import { errorHandler } from './middlewares/error.middleware.js'
 import userRoutes from './routes/user.routes.js'
 
 app.use('/api/users', userRoutes);
-
+app.get("/", (req, res) => {
+    res.send("Hello from Starter-Pack for Docker!");
+});
 app.use(notFound);
 app.use(errorHandler);
 
