@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                        String    @id @default(uuid())
+  fullName                  String    @map("full_name")
+  email                     String?   @unique
+  phone                     String?   @unique
+  passwordHash              String?   @map("password_hash")
+  role                      String    @default("customer")
+  isActive                  Boolean   @default(true) @map("is_active")
+  isVerified                Boolean   @default(false) @map("is_verified")
+  verificationToken         String?   @map("verification_token")
+  verificationTokenExpires  DateTime? @map("verification_token_expires")
+  passwordResetToken        String?   @map("password_reset_token")
+  passwordResetExpires      DateTime? @map("password_reset_expires")
+  otp                       String?
+  otpExpiry                 DateTime? @map("otp_expiry")
+  refreshToken              String?   @map("refresh_token")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
+
+  carts                     Cart[]
+  orders                    Order[]
+
+  @@map("users")
+}
+
+model Product {
+  id                     String   @id @default(uuid())
+  name                   String
+  brand                  String?
+  category               String?
+  gsm                    Int?
+  rulingType             String?  @map("ruling_type")
+  pricePerKg             Decimal  @map("price_per_kg") @db.Decimal(10, 2)
+  referenceWeightGrams   Int      @default(1000) @map("reference_weight_grams")
+  notebooksInReference   Int      @default(3) @map("notebooks_in_reference")
+  weightPerNotebookG     Decimal  @map("weight_per_notebook_g") @db.Decimal(10, 2)
+  stock                  Int      @default(0)
+  isActive               Boolean  @default(true) @map("is_active")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  cartItems              CartItem[]
+  orderItems             OrderItem[]
+  relatedFrom            RelatedProduct[] @relation("ProductRelated")
+  relatedTo              RelatedProduct[] @relation("RelatedProduct")
+
+  @@map("products")
+}
+
+model RelatedProduct {
+  id         String  @id @default(uuid())
+  productId  String  @map("product_id")
+  relatedId  String  @map("related_id")
+
+  product    Product @relation("ProductRelated", fields: [productId], references: [id], onDelete: Cascade)
+  related    Product @relation("RelatedProduct", fields: [relatedId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, relatedId])
+  @@map("related_products")
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String?    @map("user_id")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id                 String  @id @default(uuid())
+  cartId             String  @map("cart_id")
+  productId          String  @map("product_id")
+  quantityNotebooks  Int     @map("quantity_notebooks")
+  estimatedWeightG   Decimal @map("estimated_weight_g") @db.Decimal(12, 2)
+  estimatedPrice     Decimal @map("estimated_price") @db.Decimal(12, 2)
+
+  cart               Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product            Product @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId])
+  @@map("cart_items")
+}
+
+model Order {
+  id                     String   @id @default(uuid())
+  orderNumber            String   @unique @map("order_number")
+  userId                 String   @map("user_id")
+  orderType              String   @map("order_type")
+  status                 String   @default("placed")
+  estimatedTotalWeightG  Decimal  @map("estimated_total_weight_g") @db.Decimal(12, 2)
+  estimatedAmount        Decimal  @map("estimated_amount") @db.Decimal(12, 2)
+  actualTotalWeightG     Decimal? @map("actual_total_weight_g") @db.Decimal(12, 2)
+  finalAmount            Decimal? @map("final_amount") @db.Decimal(12, 2)
+  paymentStatus          String   @default("pending") @map("payment_status")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  user                   User     @relation(fields: [userId], references: [id])
+  items                  OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id                 String   @id @default(uuid())
+  orderId            String   @map("order_id")
+  productId          String   @map("product_id")
+  productName        String   @map("product_name")
+  quantityNotebooks  Int      @map("quantity_notebooks")
+  estimatedWeightG   Decimal  @map("estimated_weight_g") @db.Decimal(12, 2)
+  estimatedPrice     Decimal  @map("estimated_price") @db.Decimal(12, 2)
+  actualWeightG      Decimal? @map("actual_weight_g") @db.Decimal(12, 2)
+  finalPrice         Decimal? @map("final_price") @db.Decimal(12, 2)
+
+  order              Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product            Product  @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}

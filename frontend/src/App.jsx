@@ -10,6 +10,7 @@ import Layout from "./components/layout/Layout";
 import Register from "./pages/Auth/Register";
 import VerifyEmail from "./pages/Auth/VerifyEmail";
 import useAuthStore from "./store/authStore";
+import PardewalaStore from "./pages/PardewalaStore";
 
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -20,9 +21,16 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/login" element={<Login />}/>
+      {/* Pardewala Customer Discovery Prototype Store & Dedicated Dashboards */}
+      <Route path="/" element={<PardewalaStore />} />
+      <Route path="/store" element={<PardewalaStore />} />
+      <Route path="/user/dashboard" element={<DashboardUser />} />
+      <Route path="/admin/dashboard" element={<DashboardAdmin />} />
+
+      {/* Existing Auth & Protected Routes */}
+      <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/verify-email/:token" element={<VerifyEmail />}/>
+      <Route path="/verify-email/:token" element={<VerifyEmail />} />
       <Route
         element={
           <ProtectedRoute>
@@ -30,8 +38,6 @@ function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="/user/dashboard" element={<DashboardUser />} />
-        <Route path="/admin/dashboard" element={<DashboardAdmin />} />
         <Route path="/members" element={<Members />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
